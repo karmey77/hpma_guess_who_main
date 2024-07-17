@@ -14,6 +14,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 rooms = {}
+all_cards = [f"{i:02d}" for i in range(1, 82)]  # 01 到 81 的卡牌
 
 def generate_room_code():
     while True:
@@ -100,11 +101,16 @@ def on_start_game(data):
     room_code = data['room_code']
     room = rooms.get(room_code)
     if room and len(room['ready']) == 2 and len(room['players']) == 2:
+        room['common_cards'] = random.sample(all_cards, 25)
+        for player in room['players']:
+            room['player_cards'][player] = random.choice(room['common_cards'])
         room['game_started'] = True
         room['current_turn'] = room['players'][0]
         socketio.emit('game_started', {
             "players": room['players'],
             "current_turn": room['current_turn'],
+            "common_cards": room['common_cards'],
+            "your_secret_card": {player: room['player_cards'][player] for player in room['players']}
         }, room=room_code)
         print(f"Game started in room: {room_code}")
     else:
